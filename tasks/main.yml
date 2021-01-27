@@ -26,7 +26,10 @@
   package:
     name: "{{ 'python-semanage' if ansible_distribution == 'Debian' else 'libsemanage-python' }}"
     state: present
-  when: ansible_selinux and sftp_enable_selinux_support
+  when: 
+    - ansible_selinux 
+    - sftp_enable_selinux_support
+    - sftp_install_semanage_package
 
 - name: SFTP-Server | Set SELinux booleans
   seboolean:
