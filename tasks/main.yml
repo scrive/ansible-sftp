@@ -1,5 +1,5 @@
 ---
-- name: "Compute SFTP users."
+- name: Compute SFTP users
   set_fact:
     _sftp_users: >-
       [{% for sftp_user in sftp_users -%}
@@ -8,21 +8,21 @@
       {%- endfor %}]
 
 # Creates group for SFTP users.
-- name: SFTP-Server | Create sftp user group
+- name: Create sftp user group
   group:
     name: "{{ sftp_group_name }}"
     state: present
 
 # Necessary for chrooting of SFTP users.
-- name: SFTP-Server | Alter sftp subsystem entry
+- name: Alter sftp subsystem entry
   lineinfile:
     dest: /etc/ssh/sshd_config
     regexp: '^Subsystem(\s+)sftp'
     line: "Subsystem sftp internal-sftp -f AUTH -l VERBOSE"
     state: present
-  notify: SFTP-Server | Restart sshd
+  notify: restart sshd
 
-- name: SFTP-Server | Ensure SELinux management package is present
+- name: Ensure SELinux management package is present
   package:
     name: "{{ 'python-semanage' if ansible_distribution == 'Debian' else 'libsemanage-python' }}"
     state: present
@@ -31,7 +31,7 @@
     - sftp_enable_selinux_support
     - sftp_install_semanage_package
 
-- name: SFTP-Server | Set SELinux booleans
+- name: Set SELinux booleans
   seboolean:
     name: "{{ item }}"
     state: yes
@@ -41,7 +41,7 @@
     - ssh_chroot_rw_homedirs
   when: ansible_selinux and sftp_enable_selinux_support
 
-- name: SFTP-Server | Add sshd_config block
+- name: Add sshd_config block
   blockinfile:
     dest: /etc/ssh/sshd_config
     marker: "# {mark} SFTP-Server {{ sftp_group_name }} block"
@@ -53,16 +53,16 @@
           X11Forwarding no
           ForceCommand internal-sftp {{ sftp_enable_logging | ternary('-l VERBOSE', '') }} {{ (sftp_start_directory in sftp_directories or sftp_start_directory in sftp_directories | selectattr("name", "defined") | map(attribute='name') | list) | ternary('-d /' + sftp_start_directory, '') }}
           PasswordAuthentication {{ sftp_allow_passwords | ternary('yes', 'no') }}
-  notify: SFTP-Server | Restart sshd
+  notify: restart sshd
 
-- name: SFTP-Server | Create sftp user's group
+- name: Create sftp user's group
   group:
     name: "{{ item }}"
     state: present
   with_items: "{{ _sftp_users | selectattr('group', 'defined') | map(attribute='group') | list }}"
 
 # Create each SFTP user with home directory on the correct partition, and add to SFTP group.
-- name: SFTP-Server | Create sftp users
+- name: Create sftp users
   user:
     name: "{{ item.name }}"
     group: "{{ item.group | default(omit) }}"
@@ -80,7 +80,7 @@
 # set the permissions of e.g. /home
 # Original issue: https://github.com/johanmeiring/ansible-sftp/issues/46
 # New issue: https://github.com/johanmeiring/ansible-sftp/issues/49
-# - name: SFTP-Server | Root SFTP permissions
+# - name: Root SFTP permissions
 #   file:
 #     path: "{{ sftp_home_partition }}"
 #     state: directory
@@ -88,7 +88,7 @@
 #     group: "{{ sftp_group_name }}"
 #     owner: root
 
-- name: SFTP-Server | Correct ownership and permission of home directories
+- name: Correct ownership and permission of home directories
   file:
     path: "{{ item.home }}"
     owner: root
@@ -97,7 +97,7 @@
   with_items: "{{ _sftp_users }}"
 
 # Install all relevant public keys.
-- name: SFTP-Server | Install public keys
+- name: Install public keys
   authorized_key:
     user: "{{ item.0.name }}"
     key: "{{ lookup('file', item.1) }}"
@@ -108,7 +108,7 @@
       skip_missing: True
 
 # Update user passwords, if they were specified.
-- name: SFTP-Server | Update user passwords
+- name: Update user passwords
   user:
     name: "{{ item.name }}"
     password: "{{ item.password }}"
@@ -116,7 +116,7 @@
   when: item.password is defined
 
 # Create directories for all SFTP users. Optional, but recommended.
-- name: SFTP-Server | Create directories
+- name: Create directories
   file:
     path: "{{ item[0].home }}/{{ item[1].name | default(item[1]) }}"
     owner: "{{ item[0].name }}"
@@ -128,7 +128,7 @@
     - "{{ sftp_directories }}"
 
 # Create directories for individual SFTP users. Optional.
-- name: SFTP-Server | Create directories per user
+- name: Create directories per user
   file:
     path: "{{ item[0].home }}/{{ item[1].name | default(item[1]) }}"
     owner: "{{ item[0].name }}"
@@ -141,7 +141,7 @@
     - flags:
       skip_missing: True
 
-- name: SFTP-Server | Create dev directory for logging
+- name: Create dev directory for logging
   file:
     path: "{{ item.home }}/dev"
     owner: root
@@ -151,7 +151,7 @@
     - "{{ _sftp_users }}"
   when: sftp_enable_logging
 
-- name: SFTP-Server | Enable Logging
+- name: Enable Logging
   blockinfile:
     dest: "/etc/rsyslog.d/sshd.conf"
     create: yes
@@ -168,10 +168,10 @@
       # additionally write an auth log
       auth,authpriv.*  /var/log/sftp/auth.log
   when: sftp_enable_logging
-  notify: SFTP-Server | Restart rsyslog
+  notify: restart rsyslog
 
 # Restart sshd to ensure all configuration has been applied. This should always be the last task.
-- name: SFTP-Server | Restart sshd
+- name: Restart sshd
   service:
     name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
     state: restarted
