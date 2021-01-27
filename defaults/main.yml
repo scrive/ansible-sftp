@@ -8,3 +8,7 @@ sftp_enable_selinux_support: False
 sftp_enable_logging: False
 sftp_nologin_shell: /sbin/nologin
 sftp_install_semanage_package: True
+sftp_selinux_management_package: libsemanage-python
+sftp_selinux_booleans:
+  - ssh_chroot_full_access
+  - ssh_chroot_rw_homedirs

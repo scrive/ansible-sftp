@@ -1,4 +1,16 @@
 ---
+- name: Include distribution specific settings
+  include_vars: "{{ lookup('first_found', params) }}"
+  vars:
+    params:
+      files:
+        - "{{ ansible_distribution }}_{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_distribution }}.yml"
+        - "{{ ansible_os_family }}.yml"
+      paths:
+        - vars
+      skip: true
+
 - name: Compute SFTP users
   set_fact:
     _sftp_users: >-
@@ -24,10 +36,10 @@
 
 - name: Ensure SELinux management package is present
   package:
-    name: "{{ 'python-semanage' if ansible_distribution == 'Debian' else 'libsemanage-python' }}"
+    name: "{{ sftp_selinux_management_package }}"
     state: present
   when: 
-    - ansible_selinux 
+    - ansible_selinux
     - sftp_enable_selinux_support
     - sftp_install_semanage_package
 
@@ -36,10 +48,10 @@
     name: "{{ item }}"
     state: yes
     persistent: yes
-  with_items:
-    - ssh_chroot_full_access
-    - ssh_chroot_rw_homedirs
-  when: ansible_selinux and sftp_enable_selinux_support
+  with_items: "{{ sftp_selinux_booleans }}"
+  when:
+    - ansible_selinux
+    - sftp_enable_selinux_support
 
 - name: Add sshd_config block
   blockinfile:

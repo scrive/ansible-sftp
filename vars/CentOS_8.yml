@@ -1,0 +1,3 @@
+sftp_selinux_management_package: python3-libsemanage
+sftp_selinux_booleans:
+  - ssh_chroot_rw_homedirs
