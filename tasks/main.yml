@@ -115,7 +115,7 @@
     key:  "{% for key in item.authorized %}{{ lookup('file', key) ~ '\n'}}{% endfor %}"
     exclusive: true
   when: item.authorized
-  with_dict: "{{ _sftp_users }}"
+  with_items: "{{ _sftp_users }}"
 
 # Update user passwords, if they were specified.
 - name: Update user passwords
