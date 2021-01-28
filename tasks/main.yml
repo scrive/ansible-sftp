@@ -113,6 +113,7 @@
   authorized_key:
     user: "{{ item.0.name }}"
     key: "{{ lookup('file', item.1) }}"
+    exclusive: true
   with_subelements:
     - "{{ _sftp_users }}"
     - authorized
